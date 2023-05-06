@@ -1,11 +1,19 @@
 package com.limbo;
 
+import com.limbo.geom.Drawable;
+import com.limbo.math.ColorRGBA;
+import com.limbo.renderer.Renderer;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 应用程序主类
  *
- * @author Limbo
+ * @author yanmaoyuan
+ *
  */
-public class Application {
+public abstract class Application {
 
     protected int width;
     protected int height;
@@ -13,13 +21,17 @@ public class Application {
 
     // 显示器
     private Screen screen;
-
+    // 渲染器
+    private Renderer renderer;
+    // 渲染队列
+    protected List<Drawable> scene;
     // 运行状态
-    private volatile boolean isRunning;
+    private boolean isRunning;
 
     // 固定帧率
     private boolean fixedFrameRate;
     private long fixedTime;
+
     // 帧率（FPS）
     private int framePerSecond;
     // FPS队列
@@ -33,6 +45,8 @@ public class Application {
         width = 800;
         height = 600;
         title = "JSoftwareRenderer";
+        // 初始化渲染队列
+        scene = new ArrayList<>();
 
         // 改变运行状态
         isRunning = true;
@@ -45,14 +59,17 @@ public class Application {
      * 启动程序
      */
     public void start() {
-
         // 计时器
         long startTime = System.nanoTime();
         long previousTime = System.nanoTime();
         long deltaTime;
         float delta;
 
+        // 创建主窗口
         screen = new Screen(width, height, title);
+        // 创建渲染器
+        renderer = new Renderer(width, height);
+        renderer.setBackgroundColor(ColorRGBA.BLACK);
 
         // 初始化
         initialize();
@@ -93,29 +110,36 @@ public class Application {
 
         // 计算总运行时间
         long totalTime = System.nanoTime() - startTime;
-        System.out.println("运行总时间：" + totalTime / 1000000000.0f);
+        System.out.printf("运行总时间：" + totalTime / 1000000000.0f);
     }
 
     /**
-     * 初始化
+     * 绘制画面
      */
-    protected void initialize() {
-        // TODO
-    }
+    protected abstract void initialize() ;
 
     /**
      * 更新场景
      */
-    protected void update() {
-        // TODO
-    }
+    protected abstract void update() ;
 
     /**
      * 绘制场景
      */
     protected void render() {
+        // 清空场景
+        renderer.clear();
+
+        // 绘制场景
+        int len = scene.size();
+        if (len > 0) {
+            for (Drawable drawable : scene) {
+                drawable.draw(renderer.getImageRaster());
+            }
+        }
+
         // 交换画布缓冲区，显示画面
-        screen.swapBuffer(framePerSecond);
+        screen.swapBuffer(renderer.getRenderContext(), framePerSecond);
     }
 
     /**
@@ -128,7 +152,7 @@ public class Application {
     /**
      * 设置固定帧率
      *
-     * @param rate 帧率
+     * @param rate
      */
     public void setFrameRate(int rate) {
         if (rate <= 0) {
@@ -137,6 +161,24 @@ public class Application {
             this.fixedFrameRate = true;
             this.fixedTime = 1000000000 / rate;
         }
+    }
+
+    /**
+     * 设置分辨率
+     * @param width
+     * @param height
+     */
+    public void setResolution(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    /**
+     * 设置标题
+     * @param title
+     */
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     /**
@@ -161,25 +203,6 @@ public class Application {
         }
 
         // 求平均值
-        framePerSecond = sum / count;
-    }
-
-
-    /**
-     * 设置分辨率
-     * @param width
-     * @param height
-     */
-    public void setResolution(int width, int height) {
-        this.width = width;
-        this.height = height;
-    }
-
-    /**
-     * 设置标题
-     * @param title
-     */
-    public void setTitle(String title) {
-        this.title = title;
+        framePerSecond = (int) (sum / count);
     }
 }
